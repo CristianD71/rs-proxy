@@ -1,23 +1,32 @@
 const axios = require('axios');
 
-module.exports = async (req, res) => {
-  // Habilitamos CORS para que TU página pueda hablar con ESTE proxy
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  
-  const { search } = req.query;
-  const targetUrl = `https://ignition4.customsforge.com/search/get_data?search=${encodeURIComponent(search)}&length=1`;
+export default async function handler(req, res) {
+    // Permisos CORS para que tu web local pueda leer los datos
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  try {
-    const response = await axios.get(targetUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://ignition4.customsforge.com/',
-        'Accept': 'application/json, text/javascript, */*; q=0.01',
-        'X-Requested-With': 'XMLHttpRequest'
-      }
-    });
-    res.status(200).json(response.data);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al conectar con CustomsForge' });
-  }
-};
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
+    const { q } = req.query;
+    if (!q) return res.status(400).json({ error: 'Falta búsqueda' });
+
+    // URL real de CustomsForge
+    const targetUrl = `https://ignition4.customsforge.com/search/get_data?search=${encodeURIComponent(q)}&length=1`;
+
+    try {
+        const response = await axios.get(targetUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://ignition4.customsforge.com/'
+            }
+        });
+        // Enviamos los datos de vuelta a tu web
+        res.status(200).json(response.data);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error en la petición', details: error.message });
+    }
+}
